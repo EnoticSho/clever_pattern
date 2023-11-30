@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Реализация кэша, использующего стратегию "Least Recently Used" (LRU).
@@ -57,21 +58,22 @@ public class LruCache<K, V> implements Cache<K, V> {
     }
 
     /**
-     * Возвращает значение, связанное с указанным ключом, или {@code null}, если в кэше нет значения.
+     * Возвращает {@link Optional} значение, связанное с указанным ключом.
+     * Если ключ не найден, возвращается пустой {@link Optional}.
      *
      * @param key ключ, значение которого нужно вернуть
-     * @return значение, связанное с указанным ключом, или {@code null}, если в кэше нет значения
+     * @return {@link Optional} значение, связанное с указанным ключом
      */
     @Override
-    public V get(K key) {
+    public Optional<V> get(K key) {
         if (!map.containsKey(key)) {
             log.debug("Key not found: {}", key);
-            return null;
+            return Optional.empty();
         }
         linkedList.remove(key);
         linkedList.addFirst(key);
         log.debug("Retrieved key: {}", key);
-        return map.get(key);
+        return Optional.ofNullable(map.get(key));
     }
 
     /**

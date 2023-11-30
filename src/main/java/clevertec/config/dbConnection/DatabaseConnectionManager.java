@@ -24,8 +24,7 @@ public class DatabaseConnectionManager {
     public Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
             try {
-                ConfigurationLoader configLoader = new ConfigurationLoader();
-                Map<String, Object> config = configLoader.loadConfig();
+                Map<String, Object> config = ConfigurationLoader.loadConfig();
                 Map<String, Object> dbProperties = (Map<String, Object>) config.get("db");
                 String url = (String) dbProperties.get("dbUrl");
                 String username = (String) dbProperties.get("dbUsername");
