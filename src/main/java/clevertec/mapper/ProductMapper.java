@@ -10,9 +10,13 @@ import org.mapstruct.MappingTarget;
 @Mapper
 public interface ProductMapper {
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "created", ignore = true)
     Product toProduct(ProductDto productDto);
 
     InfoProductDto toInfoProductDto(Product product);
 
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "created", ignore = true)
     Product merge(@MappingTarget Product product, ProductDto productDto);
 }

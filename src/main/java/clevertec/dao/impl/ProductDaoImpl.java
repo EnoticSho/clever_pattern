@@ -4,6 +4,7 @@ import clevertec.config.dbConnection.DatabaseConnectionManager;
 import clevertec.dao.ProductDao;
 import clevertec.entity.Product;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -18,6 +19,7 @@ import java.util.UUID;
 /**
  * Реализация DAO (Data Access Object) для работы с продуктами в базе данных.
  */
+@Slf4j
 @RequiredArgsConstructor
 public class ProductDaoImpl implements ProductDao {
 
@@ -42,17 +44,12 @@ public class ProductDaoImpl implements ProductDao {
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 if (resultSet.next()) {
-                    return Optional.of(Product.builder()
-                            .id((UUID) resultSet.getObject("id"))
-                            .name(resultSet.getString("name"))
-                            .price(resultSet.getDouble("price"))
-                            .weight(resultSet.getDouble("weight"))
-                            .created(resultSet.getTimestamp("creation_date").toLocalDateTime())
-                            .build());
+                    return Optional.of(buildProduct(resultSet));
                 }
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            log.error("SQL exception in findById", e);
+            throw new RuntimeException("SQL exception occurred while finding product by id", e);
         }
         return Optional.empty();
     }
@@ -74,14 +71,8 @@ public class ProductDaoImpl implements ProductDao {
 
             try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
-                    Optional<Product> build = Optional.of(Product.builder()
-                            .id((UUID) resultSet.getObject("id"))
-                            .name(resultSet.getString("name"))
-                            .price(resultSet.getDouble("price"))
-                            .weight(resultSet.getDouble("weight"))
-                            .created(resultSet.getTimestamp("creation_date").toLocalDateTime())
-                            .build());
-                    productList.add(build.get());
+                    Optional<Product> product = Optional.of(buildProduct(resultSet));
+                    productList.add(product.get());
                 }
             }
         } catch (SQLException e) {
@@ -112,7 +103,6 @@ public class ProductDaoImpl implements ProductDao {
             preparedStatement.setTimestamp(5, Timestamp.valueOf(product.getCreated()));
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
             throw new RuntimeException("Failed to save product", e);
         }
         return product;
@@ -141,7 +131,6 @@ public class ProductDaoImpl implements ProductDao {
             preparedStatement.setObject(5, product.getId());
             preparedStatement.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
             throw new RuntimeException("Failed to update product", e);
         }
         return product;
@@ -163,12 +152,22 @@ public class ProductDaoImpl implements ProductDao {
              PreparedStatement preparedStatement = connection.prepareStatement(query)) {
 
             preparedStatement.setObject(1, uuid);
-            int i = preparedStatement.executeUpdate();
-            if (i < 1) {
-                throw new SQLException();
+            int rowsAffected = preparedStatement.executeUpdate();
+            if (rowsAffected < 1) {
+                throw new SQLException("Product not found for id: " + uuid);
             }
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error deleting product with id: " + uuid, e);
         }
+    }
+
+    private Product buildProduct(ResultSet resultSet) throws SQLException {
+        return Product.builder()
+                .id((UUID) resultSet.getObject("id"))
+                .name(resultSet.getString("name"))
+                .price(resultSet.getDouble("price"))
+                .weight(resultSet.getDouble("weight"))
+                .created(resultSet.getTimestamp("creation_date").toLocalDateTime())
+                .build();
     }
 }

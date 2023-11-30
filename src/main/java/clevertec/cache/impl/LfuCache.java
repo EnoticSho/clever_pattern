@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 /**
@@ -53,7 +54,8 @@ public class LfuCache<K, V> implements Cache<K, V> {
         if (mainMap.containsKey(key)) {
             mainMap.put(key, value);
             updateFrequency(key);
-        } else {
+        }
+        else {
             if (mainMap.size() >= capacity) {
                 K leastFreqKey = deleteLeastFrequentKey();
                 log.debug("Removed least frequent key: {}", leastFreqKey);
@@ -66,20 +68,35 @@ public class LfuCache<K, V> implements Cache<K, V> {
     }
 
     /**
-     * Возвращает значение, связанное с указанным ключом, или {@code null}, если в кэше нет значения.
+     * Возвращает значение, связанное с указанным ключом, если оно присутствует.
+     * <p>
+     * Этот метод возвращает {@link Optional} значение, связанное с ключом, если оно
+     * присутствует в основной карте. Если ключ является null или значение не найдено,
+     * метод возвращает пустой {@link Optional}.
+     * <p>
+     * Если значение присутствует, метод также обновляет частоту использования ключа.
      *
-     * @param key ключ, значение которого нужно вернуть
-     * @return значение, связанное с указанным ключом, или {@code null}, если в кэше нет значения
+     * @param key Ключ, по которому будет произведен поиск значения.
+     * @return {@link Optional} значение, связанное с ключом. Если ключ является null
+     * или значение не найдено, возвращается пустой {@link Optional}.
      */
     @Override
-    public V get(K key) {
-        if (key == null || !mainMap.containsKey(key)) {
-            log.debug("Key not found or null: {}", key);
-            return null;
+    public Optional<V> get(K key) {
+        if (key == null) {
+            log.debug("Key is null");
+            return Optional.empty();
         }
-        updateFrequency(key);
-        log.debug("Value retrieved for key {}", key);
-        return mainMap.get(key);
+
+        V value = mainMap.get(key);
+        if (value != null) {
+            updateFrequency(key);
+            log.debug("Value retrieved for key {}", key);
+            return Optional.of(value);
+        }
+        else {
+            log.debug("Key not found: {}", key);
+            return Optional.empty();
+        }
     }
 
     /**

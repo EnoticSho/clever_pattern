@@ -3,6 +3,7 @@ package clevertec.service.impl;
 import clevertec.dto.InfoProductDto;
 import clevertec.dto.ProductDto;
 import clevertec.entity.Product;
+import clevertec.exception.ProductNotFoundException;
 import clevertec.mapper.ProductMapper;
 import clevertec.proxy.DaoProxyImpl;
 import clevertec.service.ProductService;
@@ -20,8 +21,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public InfoProductDto get(UUID uuid) {
-        Product byId = daoProxy.getProductById(uuid);
-        return productMapper.toInfoProductDto(byId);
+        return daoProxy.getProductById(uuid)
+                .map(productMapper::toInfoProductDto)
+                .orElseThrow(() -> new ProductNotFoundException(uuid));
     }
 
     @Override
@@ -33,8 +35,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public UUID update(UUID uuid, @Valid ProductDto productDto) {
-        Product byId = daoProxy.getProductById(uuid);
-        Product merge = productMapper.merge(byId, productDto);
+        Product product = daoProxy.getProductById(uuid)
+                .orElseThrow(() -> new ProductNotFoundException(uuid));
+        Product merge = productMapper.merge(product, productDto);
         return daoProxy.update(merge).getId();
     }
 

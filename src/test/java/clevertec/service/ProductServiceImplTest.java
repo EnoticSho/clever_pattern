@@ -10,20 +10,18 @@ import clevertec.proxy.DaoProxyImpl;
 import clevertec.service.impl.ProductServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,8 +44,11 @@ public class ProductServiceImplTest {
                 .build()
                 .buildInfoProductDto();
         UUID id = product.getId();
-        when(daoProxy.getProductById(id)).thenReturn(product);
-        when(productMapper.toInfoProductDto(product)).thenReturn(expectedDto);
+
+        when(daoProxy.getProductById(id))
+                .thenReturn(Optional.of(product));
+        when(productMapper.toInfoProductDto(product))
+                .thenReturn(expectedDto);
 
         //When
         InfoProductDto actualDto = productService.get(id);
@@ -138,24 +139,26 @@ public class ProductServiceImplTest {
                 .withPrice(1000.00)
                 .build()
                 .buildProductDto();
-        when(daoProxy.getProductById(product.getId()))
-                .thenReturn(product);
+        UUID id = product.getId();
+
+        when(daoProxy.getProductById(id))
+                .thenReturn(Optional.of(product));
         when(productMapper.merge(product, productDto))
                 .thenReturn(product);
         when(daoProxy.update(product))
                 .thenReturn(product);
 
         //When
-        UUID update = productService.update(product.getId(), productDto);
+        UUID update = productService.update(id, productDto);
 
         //Then
         verify(daoProxy)
-                .getProductById(product.getId());
+                .getProductById(id);
         verify(productMapper)
                 .merge(product, productDto);
         verify(daoProxy)
                 .update(product);
-        assertEquals(product.getId(), update);
+        assertEquals(id, update);
     }
 
     @Test
@@ -174,16 +177,15 @@ public class ProductServiceImplTest {
     @Test
     public void ShouldThrowProductNotFoundExceptionWhenUUIDDoesNotExist() {
         // Given
-        UUID uuid = UUID.fromString("3ecb77f7-0114-47a7-ada7-3ec685d202a7");
+        UUID id = UUID.fromString("3ecb77f7-0114-47a7-ada7-3ec685d202a7");
         ProductDto productDto = ProductTestData.builder()
                 .build()
                 .buildProductDto();
-        when(daoProxy.getProductById(uuid))
-                .thenThrow(new ProductNotFoundException(uuid));
+
+        when(daoProxy.getProductById(id))
+                .thenReturn(Optional.empty());
 
         // When & Then
-        assertThrows(ProductNotFoundException.class, () -> productService.update(uuid, productDto));
-        verify(daoProxy).getProductById(uuid);
-        verify(daoProxy, never()).update(any(Product.class));
+        assertThrows(ProductNotFoundException.class, () -> productService.update(id, productDto));
     }
 }

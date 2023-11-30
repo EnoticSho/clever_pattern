@@ -1,4 +1,4 @@
-package clevertec.utils;
+package clevertec.utils.xmlserializer;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;

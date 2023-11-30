@@ -7,15 +7,18 @@ import clevertec.config.ConfigurationLoader;
 import clevertec.dao.ProductDao;
 import clevertec.entity.Product;
 import clevertec.exception.ProductNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
  * Прокси-класс для доступа к данным продуктов, инкапсулирующий логику кэширования.
  */
+@Slf4j
 public class DaoProxyImpl {
     private final ProductDao productDao;
     private final Cache<UUID, Product> cache;
@@ -24,9 +27,8 @@ public class DaoProxyImpl {
      * Конструктор DaoProxy.
      *
      * @param productDao DAO для работы с продуктами
-     * @throws IOException если возникает ошибка при инициализации кэша
      */
-    public DaoProxyImpl(ProductDao productDao) throws IOException {
+    public DaoProxyImpl(ProductDao productDao) {
         this.productDao = productDao;
         this.cache = cacheInit();
     }
@@ -46,36 +48,41 @@ public class DaoProxyImpl {
      * Инициализирует кэш на основе конфигурации.
      *
      * @return Инстанс кэша
-     * @throws IOException если возникает ошибка при загрузке конфигурации
      */
-    private Cache<UUID, Product> cacheInit() throws IOException {
-        ConfigurationLoader configLoader = new ConfigurationLoader();
-        Map<String, Object> objectMap = configLoader.loadConfig();
-        Map<String, Object> cache = (Map<String, Object>) objectMap.get("cache");
-        int capacity = (Integer) cache.get("capacity");
-        String cacheType = (String) cache.get("type");
-        if (cacheType.equals("lru")) {
-            return new LruCache<>(capacity);
+    private Cache<UUID, Product> cacheInit() {
+        try {
+            Map<String, Object> objectMap = ConfigurationLoader.loadConfig();
+            Map<String, Object> cacheConfig = (Map<String, Object>) objectMap.get("cache");
+            int capacity = (Integer) cacheConfig.get("capacity");
+            String cacheType = (String) cacheConfig.get("type");
+            return createCache(cacheType, capacity);
+        } catch (IOException e) {
+            log.error("Error initializing cache", e);
+            throw new RuntimeException("Failed to initialize cache", e);
         }
-        else if (cacheType.equals("lfu")) {
-            return new LfuCache<>(capacity);
-        }
-        return null;
+    }
+
+    private Cache<UUID, Product> createCache(String cacheType, int capacity) {
+        return switch (cacheType) {
+            case "lru" -> new LruCache<>(capacity);
+            case "lfu" -> new LfuCache<>(capacity);
+            default -> throw new IllegalArgumentException("Unsupported cache type: " + cacheType);
+        };
     }
 
     /**
-     * Получает продукт по его идентификатору. Сначала проверяет наличие продукта в кэше,
-     * если его нет, то загружает из DAO и помещает в кэш.
+     * Получает продукт по его идентификатору. Сначала проверяет наличие продукта в кэше.
+     * Если продукт не найден в кэше, загружает его из DAO и помещает в кэш.
+     * Возвращает Optional<Product>.
      *
      * @param id Идентификатор продукта
-     * @return Продукт, соответствующий идентификатору
+     * @return Optional<Product>, содержащий продукт, если он найден, иначе пустой Optional
      */
-    public Product getProductById(UUID id) {
-        Product product = cache.get(id);
-        if (product == null) {
-            product = productDao.findById(id)
-                    .orElseThrow(() -> new ProductNotFoundException(id));
-            cache.put(id, product);
+    public Optional<Product> getProductById(UUID id) {
+        Optional<Product> product = cache.get(id);
+        if (product.isEmpty()) {
+            product = productDao.findById(id);
+            product.ifPresent(p -> cache.put(id, p));
         }
         return product;
     }

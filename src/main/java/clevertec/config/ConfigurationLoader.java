@@ -8,20 +8,10 @@ import java.io.InputStream;
 import java.util.Map;
 
 public class ConfigurationLoader {
+    private static final String CONFIG_FILE_PATH = "src/main/resources/application.yml";
 
-    /**
-     * The default file path for the configuration file.
-     */
-    private final String configFilePath = "src/main/resources/application.yml";
-
-    /**
-     * Loads the configuration from the YAML file.
-     *
-     * @return A map containing the key-value pairs loaded from the configuration file.
-     * @throws IOException If there is an error reading the configuration file.
-     */
-    public Map<String, Object> loadConfig() throws IOException {
-        try (InputStream input = new FileInputStream(configFilePath)) {
+    public static Map<String, Object> loadConfig() throws IOException {
+        try (InputStream input = new FileInputStream(CONFIG_FILE_PATH)) {
             Yaml yaml = new Yaml();
             return yaml.load(input);
         }

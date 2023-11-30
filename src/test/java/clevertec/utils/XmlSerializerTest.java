@@ -1,9 +1,8 @@
-package clevertec.util;
+package clevertec.utils;
 
 import clevertec.data.ProductTestData;
 import clevertec.dto.InfoProductDto;
-import clevertec.entity.Product;
-import clevertec.utils.XmlSerializer;
+import clevertec.utils.xmlserializer.XmlSerializer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

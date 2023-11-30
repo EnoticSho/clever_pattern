@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -41,20 +42,20 @@ public class DaoProxyImplTest {
                 .build()
                 .buildProduct();
         UUID id = expectedProduct.getId();
-        when(cache.get(id))
-                .thenReturn(null);
 
+        when(cache.get(id))
+                .thenReturn(Optional.empty());
         when(productDao.findById(id))
                 .thenReturn(Optional.of(expectedProduct));
 
-        // When
-        Product actualProduct = daoProxy.getProductById(id);
+        // when
+        Optional<Product> actualProduct = daoProxy.getProductById(id);
 
-        //Then
-        verify(cache).get(id);
-        verify(productDao).findById(id);
-        verify(cache).put(id, expectedProduct);
-        assertEquals(expectedProduct, actualProduct);
+        // then
+        assertAll(() -> assertTrue(actualProduct.isPresent()),
+                () -> assertEquals(expectedProduct, actualProduct.get()));
+        verify(cache)
+                .put(id, expectedProduct);
     }
 
     @Test
@@ -64,17 +65,18 @@ public class DaoProxyImplTest {
                 .build()
                 .buildProduct();
         UUID id = expectedProduct.getId();
+
         when(cache.get(id))
-                .thenReturn(expectedProduct);
+                .thenReturn(Optional.of(expectedProduct));
 
-        // When
-        Product actualProduct = daoProxy.getProductById(id);
+        // when
+        Optional<Product> actualProduct = daoProxy.getProductById(id);
 
-        //Then
-        verify(cache).get(id);
-        verify(productDao, never()).findById(id);
-        verify(cache, never()).put(id, expectedProduct);
-        assertEquals(expectedProduct, actualProduct);
+        // then
+        assertAll(() -> assertTrue(actualProduct.isPresent()),
+                () -> assertEquals(expectedProduct, actualProduct.get()));
+        verify(productDao, never())
+                .findById(id);
     }
 
     @Test
